@@ -1,0 +1,80 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial de Resultados</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="supabase.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Historial de Resultados</h1>
+    <div id="auth-buttons">
+      <button id="login-btn">Iniciar sesión</button>
+      <button id="logout-btn" style="display: none;">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main>
+    <table id="tabla-resultados">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Ganador</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="contenido-tabla">
+        <!-- Carga dinámica -->
+      </tbody>
+    </table>
+  </main>
+
+  <script type="module">
+    import { supabase } from './supabase.js';
+
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const tabla = document.getElementById('contenido-tabla');
+
+    const session = await supabase.auth.getSession();
+    const user = session.data.session?.user;
+
+    if (user) {
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline';
+    } else {
+      loginBtn.style.display = 'inline';
+      logoutBtn.style.display = 'none';
+    }
+
+    loginBtn.addEventListener('click', () => {
+      window.location.href = 'login.html';
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.reload();
+    });
+
+    const { data, error } = await supabase.from('resultados').select('*').order('fecha', { ascending: false });
+
+    if (data) {
+      data.forEach(registro => {
+        const fila = document.createElement('tr');
+
+        const estado = registro.aprobado ? '✅ Aprobado' : '⏳ Pendiente';
+
+        fila.innerHTML = `
+          <td>${registro.fecha}</td>
+          <td>${registro.ganador}</td>
+          <td>${estado}</td>
+        `;
+        tabla.appendChild(fila);
+      });
+    }
+  </script>
+</body>
+</html>
