@@ -12,6 +12,13 @@
   <header>
     <h1>Historial de Resultados</h1>
     <div id="auth-buttons">
+      <select id="filtro-fecha">
+        <option value="todos">Histórico</option>
+        <option value="semanal">Semana actual</option>
+        <option value="mensual">Mes actual</option>
+        <option value="anual">Año actual</option>
+      </select>
+      <button id="admin-btn" style="display: none;">Panel Admin</button>
       <button id="login-btn">Iniciar sesión</button>
       <button id="logout-btn" style="display: none;">Cerrar sesión</button>
     </div>
@@ -37,14 +44,18 @@
 
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
+    const adminBtn = document.getElementById('admin-btn');
     const tabla = document.getElementById('contenido-tabla');
+    const filtro = document.getElementById('filtro-fecha');
 
     const session = await supabase.auth.getSession();
     const user = session.data.session?.user;
+    const adminUID = '6e985950-9022-4b2b-a393-e0ca3d545e84';
 
     if (user) {
       loginBtn.style.display = 'none';
       logoutBtn.style.display = 'inline';
+      if (user.id === adminUID) adminBtn.style.display = 'inline';
     } else {
       loginBtn.style.display = 'inline';
       logoutBtn.style.display = 'none';
@@ -59,22 +70,46 @@
       window.location.reload();
     });
 
-    const { data, error } = await supabase.from('resultados').select('*').order('fecha', { ascending: false });
+    adminBtn.addEventListener('click', () => {
+      window.location.href = 'admin.html';
+    });
 
-    if (data) {
-      data.forEach(registro => {
-        const fila = document.createElement('tr');
+    filtro.addEventListener('change', renderTabla);
 
-        const estado = registro.aprobado ? '✅ Aprobado' : '⏳ Pendiente';
+    const { data: resultados, error } = await supabase.from('resultados').select('*').order('fecha', { ascending: false });
 
-        fila.innerHTML = `
-          <td>${registro.fecha}</td>
-          <td>${registro.ganador}</td>
-          <td>${estado}</td>
-        `;
-        tabla.appendChild(fila);
+    function renderTabla() {
+      const tipo = filtro.value;
+      const hoy = new Date();
+      const inicioSemana = new Date(hoy);
+      inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
+
+      tabla.innerHTML = '';
+
+      resultados.forEach(registro => {
+        const fecha = new Date(registro.fecha);
+        let mostrar = true;
+
+        if (tipo === 'semanal') mostrar = fecha >= inicioSemana;
+        else if (tipo === 'mensual') mostrar = fecha >= inicioMes;
+        else if (tipo === 'anual') mostrar = fecha >= inicioAnio;
+
+        if (mostrar) {
+          const fila = document.createElement('tr');
+          const estado = registro.aprobado ? '✅ Aprobado' : '⏳ Pendiente';
+          fila.innerHTML = `
+            <td>${registro.fecha}</td>
+            <td>${registro.ganador}</td>
+            <td>${estado}</td>
+          `;
+          tabla.appendChild(fila);
+        }
       });
     }
+
+    if (resultados) renderTabla();
   </script>
 </body>
 </html>
