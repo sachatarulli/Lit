@@ -1,0 +1,84 @@
+<!-- admin.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Aprobación</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="supabase.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Panel de Aprobación</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Ganador</th>
+          <th>Cargado por</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-aprobaciones"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { supabase } from './supabase.js';
+
+    const tabla = document.getElementById('tabla-aprobaciones');
+
+    // UID tuyo como admin — ¡reemplazá esto por el real!
+    const adminUID = 'TU_UID_AQUI';
+
+    const session = await supabase.auth.getSession();
+    const user = session.data.session?.user;
+
+    if (!user || user.id !== adminUID) {
+      alert('Acceso denegado.');
+      window.location.href = 'index.html';
+    }
+
+    // Obtener resultados pendientes
+    const { data, error } = await supabase
+      .from('resultados')
+      .select('*')
+      .eq('aprobado', false)
+      .order('fecha', { ascending: false });
+
+    if (data) {
+      data.forEach(registro => {
+        const fila = document.createElement('tr');
+
+        fila.innerHTML = `
+          <td>${registro.fecha}</td>
+          <td>${registro.ganador}</td>
+          <td>${registro.user_id}</td>
+          <td>⏳ Pendiente</td>
+          <td><button data-id="${registro.id}" class="aprobar-btn">✅ Aprobar</button></td>
+        `;
+        tabla.appendChild(fila);
+      });
+    }
+
+    // Evento aprobar
+    tabla.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('aprobar-btn')) {
+        const id = e.target.dataset.id;
+        const { error } = await supabase
+          .from('resultados')
+          .update({ aprobado: true })
+          .eq('id', id);
+
+        if (!error) {
+          e.target.closest('tr').remove();
+        } else {
+          alert('Error al aprobar');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
