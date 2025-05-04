@@ -37,6 +37,17 @@
         <!-- Carga dinámica -->
       </tbody>
     </table>
+
+    <h2>Ganadores Semanales</h2>
+    <table id="ranking-semanal">
+      <thead>
+        <tr>
+          <th>Semana</th>
+          <th>Ganador</th>
+        </tr>
+      </thead>
+      <tbody id="contenido-ranking"></tbody>
+    </table>
   </main>
 
   <script type="module">
@@ -47,6 +58,7 @@
     const adminBtn = document.getElementById('admin-btn');
     const tabla = document.getElementById('contenido-tabla');
     const filtro = document.getElementById('filtro-fecha');
+    const ranking = document.getElementById('contenido-ranking');
 
     const session = await supabase.auth.getSession();
     const user = session.data.session?.user;
@@ -81,9 +93,9 @@
     function renderTabla() {
       const tipo = filtro.value;
       const hoy = new Date();
-      const inicioSemana = new Date(hoy);
       const dia = hoy.getDay();
-      const offset = dia === 0 ? 6 : dia - 1; // Si es domingo (0), restamos 6, si es lunes (1) restamos 0...
+      const offset = dia === 0 ? 6 : dia - 1;
+      const inicioSemana = new Date(hoy);
       inicioSemana.setDate(hoy.getDate() - offset);
       const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
       const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
@@ -111,7 +123,48 @@
       });
     }
 
-    if (resultados) renderTabla();
+    function formatFecha(date) {
+      return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    }
+
+    function calcularRankingSemanal() {
+      const semanas = {};
+
+      resultados.forEach(r => {
+        if (!r.aprobado) return;
+        const fecha = new Date(r.fecha);
+        const dia = fecha.getDay();
+        const offset = dia === 0 ? 6 : dia - 1;
+        const inicio = new Date(fecha);
+        inicio.setDate(fecha.getDate() - offset);
+        const fin = new Date(inicio);
+        fin.setDate(inicio.getDate() + 6);
+
+        const key = formatFecha(inicio) + ' al ' + formatFecha(fin);
+        if (!semanas[key]) semanas[key] = { narj: 0, mula: 0 };
+        if (r.ganador.toLowerCase() === 'narj') semanas[key].narj++;
+        else if (r.ganador.toLowerCase() === 'mula') semanas[key].mula++;
+      });
+
+      ranking.innerHTML = '';
+      Object.entries(semanas).forEach(([semana, datos]) => {
+        let ganador = 'Empate';
+        if (datos.narj > datos.mula) ganador = 'Narj';
+        else if (datos.mula > datos.narj) ganador = 'Mula';
+
+        const fila = document.createElement('tr');
+        fila.innerHTML = `
+          <td>${semana}</td>
+          <td>${ganador}</td>
+        `;
+        ranking.appendChild(fila);
+      });
+    }
+
+    if (resultados) {
+      renderTabla();
+      calcularRankingSemanal();
+    }
   </script>
 </body>
 </html>
