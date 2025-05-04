@@ -82,7 +82,9 @@
       const tipo = filtro.value;
       const hoy = new Date();
       const inicioSemana = new Date(hoy);
-      inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+      const dia = hoy.getDay();
+      const offset = dia === 0 ? 6 : dia - 1; // Si es domingo (0), restamos 6, si es lunes (1) restamos 0...
+      inicioSemana.setDate(hoy.getDate() - offset);
       const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
       const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
 
